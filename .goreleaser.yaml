@@ -13,18 +13,20 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-    binary: functions/kustomize-transformer-generator
+    main: ./functions/kustomize-transformer-generator
+    binary: kustomize-transformer-generator
+    id: kustomize-transformer-generator
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    main: ./functions/kustomize-transformer
+    binary: kustomize-transformer
+    id: kustomize-transformer
 
+# .goreleaser.yaml
 archives:
-  - format: tar.gz
-    # this name template makes the OS and Arch compatible with the results of `uname`.
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
+  - format: binary
 
 changelog:
   sort: asc
@@ -32,3 +34,19 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator:v{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - "ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator:latest"
+    build_flag_templates:
+      - "--build-arg=binary=kustomize-transformer-generator"
+    ids:
+      - kustomize-transformer-generator
+  - image_templates:
+      - "ghcr.io/kuberik/kpt-fn/kustomize-transformer:v{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - "ghcr.io/kuberik/kpt-fn/kustomize-transformer:latest"
+    build_flag_templates:
+      - "--build-arg=binary=kustomize-transformer"
+    ids:
+      - kustomize-transformer
