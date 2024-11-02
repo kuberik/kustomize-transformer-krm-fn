@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"sigs.k8s.io/kustomize/api/konfig"
@@ -31,7 +32,7 @@ func fileNameAnnotation(fileName string) string {
 	return fmt.Sprintf("file.kustomize.kuberik.io/%s", fileName)
 }
 
-func generator(rl *fn.ResourceList) (bool, error) {
+func generate(rl *fn.ResourceList) (bool, error) {
 	resourcesDir := os.Getenv("RESOURCES_DIR")
 	if resourcesDir == "" {
 		resourcesDir = "/tmp"
@@ -85,6 +86,10 @@ func generator(rl *fn.ResourceList) (bool, error) {
 		kustomization.MetaData.Annotations = make(map[string]string)
 	}
 	maps.Copy(kustomization.MetaData.Annotations, fileAnnotations)
+	kustomization.MetaData.Annotations["config.kubernetes.io/function"] = strings.TrimSpace(`
+container:
+  image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:v0.0.0
+`)
 
 	generatedKustomizationTransformer, err := fn.NewFromTypedObject(kustomization)
 	if err != nil {
@@ -95,7 +100,7 @@ func generator(rl *fn.ResourceList) (bool, error) {
 }
 
 func main() {
-	if err := fn.AsMain(fn.ResourceListProcessorFunc(generator)); err != nil {
+	if err := fn.AsMain(fn.ResourceListProcessorFunc(generate)); err != nil {
 		os.Exit(1)
 	}
 }

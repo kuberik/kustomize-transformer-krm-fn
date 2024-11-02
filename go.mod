@@ -5,7 +5,11 @@ go 1.23.1
 require github.com/GoogleContainerTools/kpt-functions-sdk/go/fn v0.0.0-20230427202446-3255accc518d
 
 require (
+	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
@@ -31,5 +35,5 @@ require (
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	sigs.k8s.io/kustomize/api v0.18.0
-	sigs.k8s.io/kustomize/kyaml v0.18.1 // indirect
+	sigs.k8s.io/kustomize/kyaml v0.18.1
 )

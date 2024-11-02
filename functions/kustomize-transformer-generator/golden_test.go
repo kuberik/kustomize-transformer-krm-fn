@@ -25,12 +25,10 @@ import (
 const TestDataPath = "testdata"
 
 func TestFunction(t *testing.T) {
-	// This golden test expects each sub-directory of `testdata` can has its input resources (in `resources.yaml`)
-	// be modified to the output resources (in `_expected.yaml`).
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("RESOURCES_DIR", path.Join(wd, TestDataPath, "test"))
-	testhelpers.RunGoldenTests(t, TestDataPath, fn.ResourceListProcessorFunc(generator))
+	testhelpers.RunGoldenTests(t, TestDataPath, fn.ResourceListProcessorFunc(generate))
 }

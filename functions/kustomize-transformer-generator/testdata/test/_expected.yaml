@@ -6,6 +6,9 @@ items:
   metadata:
     name: test
     annotations:
+      config.kubernetes.io/function: |-
+        container:
+          image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:v0.0.0
       file.kustomize.kuberik.io/resource.yaml: |
         apiVersion: v1
         kind: ConfigMap

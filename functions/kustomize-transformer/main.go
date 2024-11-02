@@ -15,33 +15,88 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"sigs.k8s.io/kustomize/api/konfig"
+	"sigs.k8s.io/kustomize/api/krusty"
+	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-var _ fn.Runner = &YourFunction{}
+const fileAnnotationPrefix = "file.kustomize.kuberik.io/"
 
-// TODO: Change to your functionConfig "Kind" name.
-type YourFunction struct {
-	FnConfigBool bool
-	FnConfigInt  int
-	FnConfigFoo  string
-}
+func transform(rl *fn.ResourceList) (bool, error) {
+	fs := filesys.MakeFsInMemory()
 
-// Run is the main function logic.
-// `items` is parsed from the STDIN "ResourceList.Items".
-// `functionConfig` is from the STDIN "ResourceList.FunctionConfig". The value has been assigned to the r attributes
-// `results` is the "ResourceList.Results" that you can write result info to.
-func (r *YourFunction) Run(ctx *fn.Context, functionConfig *fn.KubeObject, items fn.KubeObjects, results *fn.Results) bool {
-	// TODO: Write your code.
-	return true
+	kustomization := types.Kustomization{}
+	for i, r := range rl.Items {
+		filename := fmt.Sprintf("%d.yaml", i)
+		if err := fs.WriteFile(filename, []byte(r.String())); err != nil {
+			return false, err
+		}
+		kustomization.Resources = append(kustomization.Resources, filename)
+	}
+
+	functionDir := "function"
+	if err := fs.WriteFile(path.Join(functionDir, konfig.DefaultKustomizationFileName()), []byte(rl.FunctionConfig.String())); err != nil {
+		return false, err
+	}
+	kustomization.Resources = append(kustomization.Resources, functionDir)
+
+	for key, value := range rl.FunctionConfig.GetAnnotations() {
+		if !strings.HasPrefix(key, fileAnnotationPrefix) {
+			continue
+		}
+		if err := fs.WriteFile(
+			path.Join(functionDir, strings.TrimPrefix(key, fileAnnotationPrefix)),
+			[]byte(value),
+		); err != nil {
+			return false, err
+		}
+	}
+
+	switch rl.FunctionConfig.GetKind() {
+	case "Kustomize":
+		kustomization.Resources = append(kustomization.Resources, functionDir)
+	}
+	kustomizationContent, err := yaml.Marshal(kustomization)
+	if err != nil {
+		return false, err
+	}
+	if err := fs.WriteFile(konfig.DefaultKustomizationFileName(), kustomizationContent); err != nil {
+		return false, err
+	}
+
+	k := krusty.MakeKustomizer(
+		krusty.MakeDefaultOptions(),
+	)
+
+	m, err := k.Run(fs, ".")
+	if err != nil {
+		return false, err
+	}
+	rl.Items = fn.KubeObjects{}
+	for _, r := range m.Resources() {
+		o, err := r.Map()
+		if err != nil {
+			return false, err
+		}
+		ko, err := fn.NewFromTypedObject(o)
+		if err != nil {
+			return false, err
+		}
+		rl.Items = append(rl.Items, ko)
+	}
+	return true, nil
 }
 
 func main() {
-	runner := fn.WithContext(context.Background(), &YourFunction{})
-	if err := fn.AsMain(runner); err != nil {
+	if err := fn.AsMain(fn.ResourceListProcessorFunc(transform)); err != nil {
 		os.Exit(1)
 	}
 }

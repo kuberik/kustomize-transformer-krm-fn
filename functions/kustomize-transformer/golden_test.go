@@ -14,7 +14,6 @@
 package main
 
 import (
-	"context"
 	"testing"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
@@ -24,8 +23,5 @@ import (
 const TestDataPath = "testdata"
 
 func TestFunction(t *testing.T) {
-	fnRunner := fn.WithContext(context.TODO(), &YourFunction{})
-	// This golden test expects each sub-directory of `testdata` can has its input resources (in `resources.yaml`)
-	// be modified to the output resources (in `_expected.yaml`).
-	testhelpers.RunGoldenTests(t, TestDataPath, fnRunner)
+	testhelpers.RunGoldenTests(t, TestDataPath, fn.ResourceListProcessorFunc(transform))
 }
