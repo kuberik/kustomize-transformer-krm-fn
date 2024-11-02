@@ -36,10 +36,7 @@ func generator(rl *fn.ResourceList) (bool, error) {
 	if resourcesDir == "" {
 		resourcesDir = "/tmp"
 	}
-	kustomizationPath, _, err := rl.FunctionConfig.NestedString("path")
-	if err != nil {
-		return false, err
-	}
+	kustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
 	files, err := filepath.Glob(path.Join(resourcesDir, kustomizationPath, "*"))
 	if err != nil {
 		return false, err

@@ -5,9 +5,8 @@ metadata:
   annotations:
     config.kubernetes.io/function: |
       container:
-        image: ubuntu
-        network: false
+        image: ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator:v0.0.0
         mounts:
-          - src: .
-            dst: /work
+          - src: ./internal
+            dst: /tmp
             type: bind
