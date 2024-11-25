@@ -1,4 +1,4 @@
-name: goreleaser
+name: Publish
 
 on:
   pull_request:
@@ -9,20 +9,24 @@ permissions:
   packages: write
 
 jobs:
-  goreleaser:
+  publish:
+    name: Publish
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
-          fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@v5
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          go-version: "1.23.x"
+      - uses: actions/checkout@v3
+
+      - uses: ko-build/setup-ko@v0.6
+
+      - id: get_tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - run: KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator ko build --bare ./functions/kustomize-transformer-generator --tags latest,${{ steps.get_tag.outputs.tag }}
+      - run: KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer ko build --bare ./functions/kustomize-transformer --tags latest,${{ steps.get_tag.outputs.tag }}
