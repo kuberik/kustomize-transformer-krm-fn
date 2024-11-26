@@ -45,6 +45,13 @@ func generate(rl *fn.ResourceList) (bool, error) {
 	fileAnnotations := make(map[string]string)
 	kustomizationFile := ""
 	for _, file := range files {
+		fileInfo, err := os.Stat(file)
+		if err != nil {
+			return false, err
+		}
+		if !fileInfo.Mode().IsRegular() {
+			continue
+		}
 		fileName := filepath.Base(file)
 		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) {
 			if kustomizationFile != "" {
