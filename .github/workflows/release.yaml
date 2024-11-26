@@ -20,13 +20,13 @@ jobs:
 
       - uses: ko-build/setup-ko@v0.6
 
-      - id: get_tag
+      - id: get_version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
-      - run: KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator ko build --bare ./functions/kustomize-transformer-generator --tags latest,${{ steps.get_tag.outputs.tag }}
-      - run: KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer ko build --bare ./functions/kustomize-transformer --tags latest,${{ steps.get_tag.outputs.tag }}
+      - run: VERSION=${{ steps.get_version.outputs.version }} KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator ko build --bare ./functions/kustomize-transformer-generator --tags latest,${{ steps.get_version.outputs.version }}
+      - run: VERSION=${{ steps.get_version.outputs.version }} KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer ko build --bare ./functions/kustomize-transformer --tags latest,${{ steps.get_version.outputs.version }}

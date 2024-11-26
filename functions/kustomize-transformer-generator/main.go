@@ -28,6 +28,8 @@ import (
 	"sigs.k8s.io/kustomize/api/types"
 )
 
+var version string
+
 func fileNameAnnotation(fileName string) string {
 	return fmt.Sprintf("file.kustomize.kuberik.io/%s", fileName)
 }
@@ -93,10 +95,10 @@ func generate(rl *fn.ResourceList) (bool, error) {
 		kustomization.MetaData.Annotations = make(map[string]string)
 	}
 	maps.Copy(kustomization.MetaData.Annotations, fileAnnotations)
-	kustomization.MetaData.Annotations["config.kubernetes.io/function"] = strings.TrimSpace(`
+	kustomization.MetaData.Annotations["config.kubernetes.io/function"] = strings.TrimSpace(fmt.Sprintf(`
 container:
-  image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:v0.0.0
-`)
+  image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:%s
+`, version))
 
 	generatedKustomizationTransformer, err := fn.NewFromTypedObject(kustomization)
 	if err != nil {

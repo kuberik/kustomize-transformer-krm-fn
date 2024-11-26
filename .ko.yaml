@@ -1,0 +1,15 @@
+defaultPlatforms:
+  - linux/arm64
+  - linux/amd64
+
+builds:
+  - id: kustomize-transformer-generator
+    dir: . # default is .
+    main: ./functions/kustomize-transformer-generator
+    ldflags:
+      - -X main.version={{.Env.VERSION}}
+  - id: kustomize-transformer
+    dir: . # default is .
+    main: ./functions/kustomize-transformer
+    ldflags:
+      - -X main.version={{.Env.VERSION}}
