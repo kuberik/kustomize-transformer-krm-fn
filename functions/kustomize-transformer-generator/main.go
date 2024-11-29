@@ -24,7 +24,9 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"sigs.k8s.io/kustomize/api/filesys"
 	"sigs.k8s.io/kustomize/api/konfig"
+	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/types"
 )
 
@@ -34,13 +36,27 @@ func fileNameAnnotation(fileName string) string {
 	return fmt.Sprintf("file.kustomize.kuberik.io/%s", fileName)
 }
 
+func findKustomizeFiles(kustomizationPath string) ([]string, error) {
+	k := krusty.MakeKustomizer(
+		krusty.MakeDefaultOptions(),
+	)
+	fs := NewFileSystemAccessTracker(filesys.MakeFsOnDisk())
+
+	_, err := k.Run(fs, kustomizationPath)
+	if err != nil {
+		return nil, err
+	}
+	return fs.AccessedFiles(), nil
+}
+
 func generate(rl *fn.ResourceList) (bool, error) {
 	resourcesDir := os.Getenv("RESOURCES_DIR")
 	if resourcesDir == "" {
 		resourcesDir = "/tmp"
 	}
 	kustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
-	files, err := filepath.Glob(path.Join(resourcesDir, kustomizationPath, "*"))
+	kustomizationPath = path.Join(resourcesDir, kustomizationPath)
+	files, err := findKustomizeFiles(kustomizationPath)
 	if err != nil {
 		return false, err
 	}
@@ -55,7 +71,7 @@ func generate(rl *fn.ResourceList) (bool, error) {
 			continue
 		}
 		fileName := filepath.Base(file)
-		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) {
+		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) && filepath.Dir(file) == kustomizationPath {
 			if kustomizationFile != "" {
 				return false, fmt.Errorf("multiple kustomization files found in %s", kustomizationPath)
 			}
