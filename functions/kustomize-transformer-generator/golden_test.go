@@ -25,6 +25,7 @@ import (
 const TestDataPath = "testdata"
 
 func TestFunction(t *testing.T) {
+	version = "test"
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)

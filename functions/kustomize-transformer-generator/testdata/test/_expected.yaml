@@ -8,7 +8,7 @@ items:
     annotations:
       config.kubernetes.io/function: |-
         container:
-          image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:v0.0.0
+          image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:test
       file.kustomize.kuberik.io/resource.yaml: |
         apiVersion: v1
         kind: ConfigMap
