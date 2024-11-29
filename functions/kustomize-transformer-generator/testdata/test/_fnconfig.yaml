@@ -2,4 +2,4 @@ apiVersion: fn.kpt.dev/v1alpha1
 kind: KustomizeTransformerGenerator
 metadata:
   name: test
-path: internal
+path: test/internal

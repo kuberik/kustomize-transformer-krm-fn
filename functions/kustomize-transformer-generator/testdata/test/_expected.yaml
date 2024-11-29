@@ -21,4 +21,4 @@ functionConfig:
   kind: KustomizeTransformerGenerator
   metadata:
     name: test
-  path: internal
+  path: test/internal

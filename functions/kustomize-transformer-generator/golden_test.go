@@ -30,6 +30,6 @@ func TestFunction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("RESOURCES_DIR", path.Join(wd, TestDataPath, "test"))
+	t.Setenv("RESOURCES_DIR", path.Join(wd, TestDataPath))
 	testhelpers.RunGoldenTests(t, TestDataPath, fn.ResourceListProcessorFunc(generate))
 }
