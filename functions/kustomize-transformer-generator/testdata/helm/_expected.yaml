@@ -1,0 +1,24 @@
+apiVersion: config.kubernetes.io/v1
+kind: ResourceList
+items:
+- apiVersion: kustomize.config.k8s.io/v1beta1
+  kind: Kustomization
+  metadata:
+    name: test
+    annotations:
+      config.kubernetes.io/function: |-
+        container:
+          image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:test
+          network: true
+      kustomize.kuberik.io/kustomization-path: helm/internal
+  helmCharts:
+  - name: hello-world
+    releaseName: ahoy
+    repo: https://helm.github.io/examples
+    version: 0.1.0
+functionConfig:
+  apiVersion: fn.kpt.dev/v1alpha1
+  kind: KustomizeTransformerGenerator
+  metadata:
+    name: test
+  path: helm/internal

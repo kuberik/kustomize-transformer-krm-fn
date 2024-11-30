@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -39,17 +38,25 @@ func fileNameAnnotation(fileName string) string {
 	return fmt.Sprintf("%s%s", annotations.FileAnnotationPrefix, fileName)
 }
 
-func findKustomizeFiles(kustomizationPath string) ([]string, error) {
-	k := krusty.MakeKustomizer(
-		krusty.MakeDefaultOptions(),
-	)
-	fs := kuberik_filesys.NewFileSystemAccessTracker(filesys.MakeFsOnDisk())
+func findKustomizeFiles(rootPath string, relativeKustomizationPath string) ([]string, error) {
+	// TODO: also add the same to both kustomize-transformer-generator and kustomize-transformer
+	// TODO: check if options are the same as in kustomize cmd
+	options := krusty.MakeDefaultOptions()
+	options.PluginConfig.HelmConfig.Enabled = true
+	options.PluginConfig.HelmConfig.Command = "helm"
 
-	_, err := k.Run(fs, kustomizationPath)
+	trackerFs := kuberik_filesys.NewFileSystemAccessTracker(filesys.MakeFsOnDisk())
+	fs, err := kuberik_filesys.NewSandboxFS(trackerFs, rootPath)
 	if err != nil {
 		return nil, err
 	}
-	return fs.AccessedFiles(), nil
+
+	k := krusty.MakeKustomizer(options)
+	_, err = k.Run(fs, relativeKustomizationPath)
+	if err != nil {
+		return nil, err
+	}
+	return trackerFs.AccessedFiles(), nil
 }
 
 func generate(rl *fn.ResourceList) (bool, error) {
@@ -58,8 +65,7 @@ func generate(rl *fn.ResourceList) (bool, error) {
 		resourcesDir = "/tmp"
 	}
 	relativeKustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
-	kustomizationPath := path.Join(resourcesDir, relativeKustomizationPath)
-	files, err := findKustomizeFiles(kustomizationPath)
+	files, err := findKustomizeFiles(resourcesDir, relativeKustomizationPath)
 	if err != nil {
 		return false, err
 	}
@@ -82,9 +88,9 @@ func generate(rl *fn.ResourceList) (bool, error) {
 		}
 		fileName := filepath.Base(file)
 		annotation := fileNameAnnotation(relPath)
-		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) && filepath.Dir(file) == kustomizationPath {
+		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) && filepath.Dir(relPath) == relativeKustomizationPath {
 			if kustomizationAnnotation != "" {
-				return false, fmt.Errorf("multiple kustomization files found in %s", kustomizationPath)
+				return false, fmt.Errorf("multiple kustomization files found in %s", relativeKustomizationPath)
 			}
 			kustomizationAnnotation = annotation
 		}
@@ -95,7 +101,7 @@ func generate(rl *fn.ResourceList) (bool, error) {
 		fileAnnotations[annotation] = string(contents)
 	}
 	if kustomizationAnnotation == "" {
-		return false, fmt.Errorf("kustomization file not found in %s", kustomizationPath)
+		return false, fmt.Errorf("kustomization file not found in %s", relativeKustomizationPath)
 	}
 	kustomization := &types.Kustomization{}
 	if err := kustomization.Unmarshal([]byte(fileAnnotations[kustomizationAnnotation])); err != nil {

@@ -32,15 +32,16 @@ import (
 )
 
 func transform(rl *fn.ResourceList) (bool, error) {
-	fs := &kuberik_filesys.OverlayFs{
-		Upper: filesys.MakeFsInMemory(),
-		Lower: filesys.MakeFsOnDisk(),
+	memFS := filesys.MakeFsInMemory()
+	fs, err := kuberik_filesys.NewSandboxFS(memFS, "")
+	if err != nil {
+		return false, err
 	}
 
 	kustomization := types.Kustomization{}
 	for i, r := range rl.Items {
 		filename := fmt.Sprintf("%d.yaml", i)
-		if err := fs.WriteFile(filename, []byte(r.String())); err != nil {
+		if err := memFS.WriteFile(filename, []byte(r.String())); err != nil {
 			return false, err
 		}
 		kustomization.Resources = append(kustomization.Resources, filename)
@@ -48,7 +49,7 @@ func transform(rl *fn.ResourceList) (bool, error) {
 
 	functionDir := "function"
 	kustomizationDir := path.Join(functionDir, rl.FunctionConfig.GetAnnotation(annotations.KustomizationPathAnnotation))
-	if err := fs.WriteFile(path.Join(kustomizationDir, konfig.DefaultKustomizationFileName()), []byte(rl.FunctionConfig.String())); err != nil {
+	if err := memFS.WriteFile(path.Join(kustomizationDir, konfig.DefaultKustomizationFileName()), []byte(rl.FunctionConfig.String())); err != nil {
 		return false, err
 	}
 
@@ -56,7 +57,7 @@ func transform(rl *fn.ResourceList) (bool, error) {
 		if !strings.HasPrefix(key, annotations.FileAnnotationPrefix) {
 			continue
 		}
-		if err := fs.WriteFile(
+		if err := memFS.WriteFile(
 			path.Join(functionDir, strings.TrimPrefix(key, annotations.FileAnnotationPrefix)),
 			[]byte(value),
 		); err != nil {
@@ -72,13 +73,14 @@ func transform(rl *fn.ResourceList) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err := fs.WriteFile(konfig.DefaultKustomizationFileName(), kustomizationContent); err != nil {
+	if err := memFS.WriteFile(konfig.DefaultKustomizationFileName(), kustomizationContent); err != nil {
 		return false, err
 	}
 
-	k := krusty.MakeKustomizer(
-		krusty.MakeDefaultOptions(),
-	)
+	options := krusty.MakeDefaultOptions()
+	options.PluginConfig.HelmConfig.Enabled = true
+	options.PluginConfig.HelmConfig.Command = "helm"
+	k := krusty.MakeKustomizer(options)
 
 	m, err := k.Run(fs, ".")
 	if err != nil {
