@@ -46,6 +46,10 @@ items:
 - apiVersion: v1
   kind: ConfigMap
   metadata:
+    name: foo-existing
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
     name: foo2
 - apiVersion: v1
   data:
