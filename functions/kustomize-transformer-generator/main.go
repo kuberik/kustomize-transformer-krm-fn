@@ -28,23 +28,22 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	"github.com/kuberik/kustomize-transformer-krm-fn/pkg/annotations"
+	kuberik_filesys "github.com/kuberik/kustomize-transformer-krm-fn/pkg/filesys"
 )
 
 var version string
 
-const (
-	kustomizationPathAnnotation = "kustomize.kuberik.io/kustomization-path"
-)
-
 func fileNameAnnotation(fileName string) string {
-	return fmt.Sprintf("file.kustomize.kuberik.io/%s", fileName)
+	return fmt.Sprintf("%s%s", annotations.FileAnnotationPrefix, fileName)
 }
 
 func findKustomizeFiles(kustomizationPath string) ([]string, error) {
 	k := krusty.MakeKustomizer(
 		krusty.MakeDefaultOptions(),
 	)
-	fs := NewFileSystemAccessTracker(filesys.MakeFsOnDisk())
+	fs := kuberik_filesys.NewFileSystemAccessTracker(filesys.MakeFsOnDisk())
 
 	_, err := k.Run(fs, kustomizationPath)
 	if err != nil {
@@ -121,7 +120,7 @@ func generate(rl *fn.ResourceList) (bool, error) {
 	// set annotations
 	if kustomization.MetaData.Annotations == nil {
 		kustomization.MetaData.Annotations = make(map[string]string)
-		kustomization.MetaData.Annotations[kustomizationPathAnnotation] = relativeKustomizationPath
+		kustomization.MetaData.Annotations[annotations.KustomizationPathAnnotation] = relativeKustomizationPath
 	}
 	maps.Copy(kustomization.MetaData.Annotations, fileAnnotations)
 	kustomization.MetaData.Annotations["config.kubernetes.io/function"] = strings.TrimSpace(fmt.Sprintf(`

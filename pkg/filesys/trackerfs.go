@@ -1,4 +1,4 @@
-package main
+package filesys
 
 import (
 	"path/filepath"

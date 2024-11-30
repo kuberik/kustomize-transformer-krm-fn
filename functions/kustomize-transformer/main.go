@@ -26,15 +26,13 @@ import (
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
-)
 
-const (
-	fileAnnotationPrefix        = "file.kustomize.kuberik.io/"
-	kustomizationPathAnnotation = "kustomize.kuberik.io/kustomization-path"
+	"github.com/kuberik/kustomize-transformer-krm-fn/pkg/annotations"
+	kuberik_filesys "github.com/kuberik/kustomize-transformer-krm-fn/pkg/filesys"
 )
 
 func transform(rl *fn.ResourceList) (bool, error) {
-	fs := &OverlayFs{
+	fs := &kuberik_filesys.OverlayFs{
 		Upper: filesys.MakeFsInMemory(),
 		Lower: filesys.MakeFsOnDisk(),
 	}
@@ -49,17 +47,17 @@ func transform(rl *fn.ResourceList) (bool, error) {
 	}
 
 	functionDir := "function"
-	kustomizationDir := path.Join(functionDir, rl.FunctionConfig.GetAnnotation(kustomizationPathAnnotation))
+	kustomizationDir := path.Join(functionDir, rl.FunctionConfig.GetAnnotation(annotations.KustomizationPathAnnotation))
 	if err := fs.WriteFile(path.Join(kustomizationDir, konfig.DefaultKustomizationFileName()), []byte(rl.FunctionConfig.String())); err != nil {
 		return false, err
 	}
 
 	for key, value := range rl.FunctionConfig.GetAnnotations() {
-		if !strings.HasPrefix(key, fileAnnotationPrefix) {
+		if !strings.HasPrefix(key, annotations.FileAnnotationPrefix) {
 			continue
 		}
 		if err := fs.WriteFile(
-			path.Join(functionDir, strings.TrimPrefix(key, fileAnnotationPrefix)),
+			path.Join(functionDir, strings.TrimPrefix(key, annotations.FileAnnotationPrefix)),
 			[]byte(value),
 		); err != nil {
 			return false, err
