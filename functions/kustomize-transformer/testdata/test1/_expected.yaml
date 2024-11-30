@@ -1,6 +1,44 @@
 apiVersion: config.kubernetes.io/v1
 kind: ResourceList
 items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      app: hello
+    name: the-deployment
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: hello
+        deployment: hello
+    template:
+      metadata:
+        labels:
+          app: hello
+          deployment: hello
+      spec:
+        containers:
+        - command:
+          - /hello
+          - --port=8080
+          - --enableRiskyFeature=$(ENABLE_RISKY)
+          env:
+          - name: ALT_GREETING
+            valueFrom:
+              configMapKeyRef:
+                key: altGreeting
+                name: the-map
+          - name: ENABLE_RISKY
+            valueFrom:
+              configMapKeyRef:
+                key: enableRisky
+                name: the-map
+          image: monopole/hello:1
+          name: the-container
+          ports:
+          - containerPort: 8080
 - apiVersion: v1
   kind: ConfigMap
   metadata:
@@ -9,6 +47,30 @@ items:
   kind: ConfigMap
   metadata:
     name: foo2
+- apiVersion: v1
+  data:
+    altGreeting: Good Morning!
+    enableRisky: "false"
+  kind: ConfigMap
+  metadata:
+    labels:
+      app: hello
+    name: the-map
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: hello
+    name: the-service
+  spec:
+    ports:
+    - port: 8666
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: hello
+      deployment: hello
+    type: LoadBalancer
 functionConfig:
   apiVersion: kustomize.config.k8s.io/v1beta1
   kind: Kustomization
@@ -39,3 +101,4 @@ functionConfig:
   resources:
   - resource.yaml
   - subfolder
+  - https://github.com/kuberik/kustomize-transformer-krm-fn-fixtures//helloWorld?ref=205c0c83a221dc75d96c6722f86a00e42050d22b

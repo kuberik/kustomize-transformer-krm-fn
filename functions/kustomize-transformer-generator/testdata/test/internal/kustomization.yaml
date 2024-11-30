@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - resource.yaml
   - subfolder
+  - https://github.com/kuberik/kustomize-transformer-krm-fn-fixtures//helloWorld?ref=205c0c83a221dc75d96c6722f86a00e42050d22b

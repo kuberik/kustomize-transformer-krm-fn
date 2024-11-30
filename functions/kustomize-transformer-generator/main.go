@@ -24,10 +24,10 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
-	"sigs.k8s.io/kustomize/api/filesys"
 	"sigs.k8s.io/kustomize/api/konfig"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
 var version string
@@ -67,6 +67,13 @@ func generate(rl *fn.ResourceList) (bool, error) {
 	fileAnnotations := make(map[string]string)
 	kustomizationAnnotation := ""
 	for _, file := range files {
+		relPath, err := filepath.Rel(resourcesDir, file)
+		if err != nil {
+			return false, err
+		}
+		if !filepath.IsLocal(relPath) {
+			continue
+		}
 		fileInfo, err := os.Stat(file)
 		if err != nil {
 			return false, err
@@ -75,10 +82,6 @@ func generate(rl *fn.ResourceList) (bool, error) {
 			continue
 		}
 		fileName := filepath.Base(file)
-		relPath, err := filepath.Rel(resourcesDir, file)
-		if err != nil {
-			return false, err
-		}
 		annotation := fileNameAnnotation(relPath)
 		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) && filepath.Dir(file) == kustomizationPath {
 			if kustomizationAnnotation != "" {

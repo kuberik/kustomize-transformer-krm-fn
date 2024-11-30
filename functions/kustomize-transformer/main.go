@@ -34,7 +34,10 @@ const (
 )
 
 func transform(rl *fn.ResourceList) (bool, error) {
-	fs := filesys.MakeFsInMemory()
+	fs := &OverlayFs{
+		Upper: filesys.MakeFsInMemory(),
+		Lower: filesys.MakeFsOnDisk(),
+	}
 
 	kustomization := types.Kustomization{}
 	for i, r := range rl.Items {
@@ -85,11 +88,7 @@ func transform(rl *fn.ResourceList) (bool, error) {
 	}
 	rl.Items = fn.KubeObjects{}
 	for _, r := range m.Resources() {
-		o, err := r.Map()
-		if err != nil {
-			return false, err
-		}
-		ko, err := fn.NewFromTypedObject(o)
+		ko, err := fn.ParseKubeObject([]byte(r.MustYaml()))
 		if err != nil {
 			return false, err
 		}
