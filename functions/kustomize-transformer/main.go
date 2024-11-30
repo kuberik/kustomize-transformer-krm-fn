@@ -28,7 +28,10 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-const fileAnnotationPrefix = "file.kustomize.kuberik.io/"
+const (
+	fileAnnotationPrefix        = "file.kustomize.kuberik.io/"
+	kustomizationPathAnnotation = "kustomize.kuberik.io/kustomization-path"
+)
 
 func transform(rl *fn.ResourceList) (bool, error) {
 	fs := filesys.MakeFsInMemory()
@@ -43,10 +46,10 @@ func transform(rl *fn.ResourceList) (bool, error) {
 	}
 
 	functionDir := "function"
-	if err := fs.WriteFile(path.Join(functionDir, konfig.DefaultKustomizationFileName()), []byte(rl.FunctionConfig.String())); err != nil {
+	kustomizationDir := path.Join(functionDir, rl.FunctionConfig.GetAnnotation(kustomizationPathAnnotation))
+	if err := fs.WriteFile(path.Join(kustomizationDir, konfig.DefaultKustomizationFileName()), []byte(rl.FunctionConfig.String())); err != nil {
 		return false, err
 	}
-	kustomization.Resources = append(kustomization.Resources, functionDir)
 
 	for key, value := range rl.FunctionConfig.GetAnnotations() {
 		if !strings.HasPrefix(key, fileAnnotationPrefix) {
@@ -61,8 +64,8 @@ func transform(rl *fn.ResourceList) (bool, error) {
 	}
 
 	switch rl.FunctionConfig.GetKind() {
-	case "Kustomize":
-		kustomization.Resources = append(kustomization.Resources, functionDir)
+	case "Kustomization":
+		kustomization.Resources = append(kustomization.Resources, kustomizationDir)
 	}
 	kustomizationContent, err := yaml.Marshal(kustomization)
 	if err != nil {

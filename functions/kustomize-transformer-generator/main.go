@@ -32,6 +32,10 @@ import (
 
 var version string
 
+const (
+	kustomizationPathAnnotation = "kustomize.kuberik.io/kustomization-path"
+)
+
 func fileNameAnnotation(fileName string) string {
 	return fmt.Sprintf("file.kustomize.kuberik.io/%s", fileName)
 }
@@ -54,14 +58,14 @@ func generate(rl *fn.ResourceList) (bool, error) {
 	if resourcesDir == "" {
 		resourcesDir = "/tmp"
 	}
-	kustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
-	kustomizationPath = path.Join(resourcesDir, kustomizationPath)
+	relativeKustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
+	kustomizationPath := path.Join(resourcesDir, relativeKustomizationPath)
 	files, err := findKustomizeFiles(kustomizationPath)
 	if err != nil {
 		return false, err
 	}
 	fileAnnotations := make(map[string]string)
-	kustomizationFile := ""
+	kustomizationAnnotation := ""
 	for _, file := range files {
 		fileInfo, err := os.Stat(file)
 		if err != nil {
@@ -71,26 +75,31 @@ func generate(rl *fn.ResourceList) (bool, error) {
 			continue
 		}
 		fileName := filepath.Base(file)
+		relPath, err := filepath.Rel(resourcesDir, file)
+		if err != nil {
+			return false, err
+		}
+		annotation := fileNameAnnotation(relPath)
 		if slices.Contains(konfig.RecognizedKustomizationFileNames(), fileName) && filepath.Dir(file) == kustomizationPath {
-			if kustomizationFile != "" {
+			if kustomizationAnnotation != "" {
 				return false, fmt.Errorf("multiple kustomization files found in %s", kustomizationPath)
 			}
-			kustomizationFile = file
+			kustomizationAnnotation = annotation
 		}
 		contents, err := os.ReadFile(file)
 		if err != nil {
 			return false, err
 		}
-		fileAnnotations[fileNameAnnotation(fileName)] = string(contents)
+		fileAnnotations[annotation] = string(contents)
 	}
-	if kustomizationFile == "" {
+	if kustomizationAnnotation == "" {
 		return false, fmt.Errorf("kustomization file not found in %s", kustomizationPath)
 	}
 	kustomization := &types.Kustomization{}
-	if err := kustomization.Unmarshal([]byte(fileAnnotations[fileNameAnnotation(filepath.Base(kustomizationFile))])); err != nil {
+	if err := kustomization.Unmarshal([]byte(fileAnnotations[kustomizationAnnotation])); err != nil {
 		return false, err
 	}
-	delete(fileAnnotations, fileNameAnnotation(filepath.Base(kustomizationFile)))
+	delete(fileAnnotations, kustomizationAnnotation)
 
 	// set type meta
 	if kustomization.TypeMeta.Kind == "" {
@@ -109,6 +118,7 @@ func generate(rl *fn.ResourceList) (bool, error) {
 	// set annotations
 	if kustomization.MetaData.Annotations == nil {
 		kustomization.MetaData.Annotations = make(map[string]string)
+		kustomization.MetaData.Annotations[kustomizationPathAnnotation] = relativeKustomizationPath
 	}
 	maps.Copy(kustomization.MetaData.Annotations, fileAnnotations)
 	kustomization.MetaData.Annotations["config.kubernetes.io/function"] = strings.TrimSpace(fmt.Sprintf(`
