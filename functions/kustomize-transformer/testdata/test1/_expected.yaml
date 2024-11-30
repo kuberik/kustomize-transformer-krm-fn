@@ -18,6 +18,7 @@ functionConfig:
       config.kubernetes.io/function: |-
         container:
           image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:test
+          network: true
       file.kustomize.kuberik.io/test/internal/resource.yaml: |
         apiVersion: v1
         kind: ConfigMap

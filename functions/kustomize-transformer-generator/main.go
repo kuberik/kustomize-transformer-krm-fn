@@ -124,6 +124,7 @@ func generate(rl *fn.ResourceList) (bool, error) {
 	kustomization.MetaData.Annotations["config.kubernetes.io/function"] = strings.TrimSpace(fmt.Sprintf(`
 container:
   image: ghcr.io/kuberik/kpt-fn/kustomize-transformer:%s
+  network: true
 `, version))
 
 	generatedKustomizationTransformer, err := fn.NewFromTypedObject(kustomization)
