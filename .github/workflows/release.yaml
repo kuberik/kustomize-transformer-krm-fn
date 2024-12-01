@@ -1,7 +1,6 @@
 name: Publish
 
 on:
-  pull_request:
   push:
 
 permissions:
@@ -10,6 +9,9 @@ permissions:
 
 jobs:
   publish:
+    strategy:
+      matrix:
+        helm_version: [3.15, 3.16]
     name: Publish
     runs-on: ubuntu-latest
     steps:
@@ -28,5 +30,12 @@ jobs:
             echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
-      - run: VERSION=${{ steps.get_version.outputs.version }} KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator ko build --bare ./functions/kustomize-transformer-generator --tags latest,${{ steps.get_version.outputs.version }}
-      - run: VERSION=${{ steps.get_version.outputs.version }} KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer ko build --bare ./functions/kustomize-transformer --tags latest,${{ steps.get_version.outputs.version }}
+      - run: >-
+          export VERSION=${{ steps.get_version.outputs.version }}-helm-${{ matrix.helm_version }};
+          KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator
+          ko build --bare ./functions/kustomize-transformer-generator --tags latest,${VERSION}
+      - run: >-
+          export VERSION=${{ steps.get_version.outputs.version }}-helm-${{ matrix.helm_version }};
+          KO_DEFAULTBASEIMAGE=alpine/helm:${{ matrix.helm_version }}
+          KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer
+          ko build --bare ./functions/kustomize-transformer --tags latest,${VERSION}
