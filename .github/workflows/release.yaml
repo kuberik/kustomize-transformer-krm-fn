@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         helm_version: [3.15, 3.16]
+        kustomize_version: [5.1.1, 5.2.1, 5.3.0, 5.4.3, 5.5.0]
     name: Publish
     runs-on: ubuntu-latest
     steps:
@@ -30,12 +31,18 @@ jobs:
             echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
+      - run: |
+          kustomize_version_tag=$(git ls-remote https://github.com/kubernetes-sigs/kustomize.git kustomize/v${{ matrix.kustomize_version }} | awk '{print $1}')
+          go get sigs.k8s.io/kustomize/api@${kustomize_version_tag}
+          go get sigs.k8s.io/kustomize/kyaml@${kustomize_version_tag}
+          go mod tidy
+
       - run: >-
-          export VERSION=${{ steps.get_version.outputs.version }}-helm-${{ matrix.helm_version }};
+          export VERSION=${{ steps.get_version.outputs.version }}-helm-${{ matrix.helm_version }}-kustomize-${{ matrix.kustomize_version }};
           KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator
           ko build --bare ./functions/kustomize-transformer-generator --tags latest,${VERSION}
       - run: >-
-          export VERSION=${{ steps.get_version.outputs.version }}-helm-${{ matrix.helm_version }};
+          export VERSION=${{ steps.get_version.outputs.version }}-helm-${{ matrix.helm_version }}-kustomize-${{ matrix.kustomize_version }};
           KO_DEFAULTBASEIMAGE=alpine/helm:${{ matrix.helm_version }}
           KO_DOCKER_REPO=ghcr.io/kuberik/kpt-fn/kustomize-transformer
           ko build --bare ./functions/kustomize-transformer --tags latest,${VERSION}
