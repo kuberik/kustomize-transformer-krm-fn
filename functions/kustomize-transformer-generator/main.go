@@ -65,6 +65,9 @@ func generate(rl *fn.ResourceList) (bool, error) {
 		resourcesDir = "/tmp"
 	}
 	relativeKustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
+	if relativeKustomizationPath == "" {
+		relativeKustomizationPath = "."
+	}
 	files, err := findKustomizeFiles(resourcesDir, relativeKustomizationPath)
 	if err != nil {
 		return false, err
