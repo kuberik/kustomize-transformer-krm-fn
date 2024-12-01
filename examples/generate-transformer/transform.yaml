@@ -8,5 +8,5 @@ metadata:
         image: ghcr.io/kuberik/kpt-fn/kustomize-transformer-generator:v0.0.0
         mounts:
           - src: ./internal
-            dst: /tmp
+            dst: /resources
             type: bind

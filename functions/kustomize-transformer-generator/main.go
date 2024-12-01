@@ -62,7 +62,7 @@ func findKustomizeFiles(rootPath string, relativeKustomizationPath string) ([]st
 func generate(rl *fn.ResourceList) (bool, error) {
 	resourcesDir := os.Getenv("RESOURCES_DIR")
 	if resourcesDir == "" {
-		resourcesDir = "/tmp"
+		resourcesDir = "/resources"
 	}
 	relativeKustomizationPath, _, _ := rl.FunctionConfig.NestedString("path")
 	if relativeKustomizationPath == "" {
